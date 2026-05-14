@@ -38,8 +38,6 @@ class BankScannerService {
     _cameraController = null;
   }
 
-  /// Reading-order text: sort ML Kit lines by vertical position then horizontal,
-  /// which matches passbook layout better than [RecognizedText.text] alone.
   String _sortedOcrText(RecognizedText text) {
     final items = <({double y, double x, String t})>[];
     for (final block in text.blocks) {
@@ -63,7 +61,6 @@ class BankScannerService {
     return _parser.parse(raw);
   }
 
-  /// Single photo for preview (no OCR).
   Future<String?> takePictureOnly() async {
     if (!isInitialized) return null;
     final xFile = await _cameraController!.takePicture();

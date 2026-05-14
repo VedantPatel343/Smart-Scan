@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Reusable row showing a labelled value with a copy-to-clipboard button.
 class ResultTile extends StatelessWidget {
   final String label;
   final String value;

@@ -64,7 +64,6 @@ class BankScannerController extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Camera: one frame for preview; OCR runs in [processPreviewImage].
   Future<void> captureForPreview() async {
     if (_state != ScannerState.ready) return;
     if (!_service.isInitialized) {
@@ -96,7 +95,6 @@ class BankScannerController extends ChangeNotifier {
     _setState(ScannerState.ready);
   }
 
-  /// Run OCR + passbook parser on the preview image, then validate.
   Future<void> processPreviewImage() async {
     if (_state != ScannerState.preview || _previewImagePath == null) return;
     _errorMessage = null;

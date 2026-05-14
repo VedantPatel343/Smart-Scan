@@ -1,31 +1,10 @@
 import '../entities/bank_details.dart';
 
-/// Manual parsing engine for extracting banking information from raw OCR text.
-///
-/// ⚠️  CONSTRAINT: No third-party parsing library is used.
-///     All regex patterns and heuristics are hand-crafted.
 class BankDocumentParser {
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
 
-  /// Parse [rawText] produced by an OCR engine and return [BankDetails].
-  ///
-  /// Heuristics align with the assignment brief:
-  /// · **Account number** — prefer explicit labels / "A/c" lines when many digit
-  ///   runs exist; blind scan skips phone-like and typical transaction rows.
-  /// · **IFSC** — RBI pattern `AAAA0XXXXXX` (5th char OCR-corrected).
-  /// · **Name** — label-driven extraction first, then de-noised free text.
   BankDetails parse(String rawText) {
     final normalised = _normaliseOcrText(rawText);
     final lines = _splitLines(normalised);
-
-    // Build a second list where label-only lines (ending with ':') are
-    // pre-merged with the next line. Many passbooks split the field label
-    // and value across two OCR lines, e.g.:
-    //   "Account No :"     →  joined into →  "Account No : 203941044"
-    //   "203941044"
-    // We search the joined list so we never miss either format.
     final joinedLines = _buildJoinedLines(lines);
 
     final ifscCode = _extractIfscCode(joinedLines);
@@ -42,13 +21,9 @@ class BankDocumentParser {
     );
   }
 
-  /// Assignment-style API name — identical to [parse].
   BankDetails parsePassbook(String rawText) => parse(rawText);
 
-  // ---------------------------------------------------------------------------
   // OCR Normalisation
-  // ---------------------------------------------------------------------------
-
   String _normaliseOcrText(String text) {
     var result = text
         .replaceAll(RegExp(r'[\u00A0\u2000-\u200B\uFEFF]'), ' ')
@@ -60,10 +35,7 @@ class BankDocumentParser {
     return result;
   }
 
-  // ---------------------------------------------------------------------------
   // Line splitting
-  // ---------------------------------------------------------------------------
-
   List<String> _splitLines(String text) {
     return text
         .split(RegExp(r'[\n\r]+'))
@@ -72,12 +44,7 @@ class BankDocumentParser {
         .toList();
   }
 
-  // ---------------------------------------------------------------------------
   // Label+value line joining
-  // ---------------------------------------------------------------------------
-
-  /// Produces a combined list: all original lines PLUS synthetic joined lines
-  /// where a label-only line is concatenated with its successor.
   List<String> _buildJoinedLines(List<String> lines) {
     final result = <String>[];
     for (int i = 0; i < lines.length; i++) {
@@ -96,7 +63,6 @@ class BankDocumentParser {
           result.add('$t : $next');
         } else if (_isAccountLabelSeekingNextLine(t) &&
             RegExp(r'^\d').hasMatch(next)) {
-          // "Account Number" / "A/c No" on one line, value on the next OCR line.
           result.add('$t $next');
         }
       }
@@ -127,10 +93,7 @@ class BankDocumentParser {
     return u.contains('ACCOUNT') || u.contains('A/C') || u.contains('A.C');
   }
 
-  // ---------------------------------------------------------------------------
   // IFSC Code Extraction
-  // ---------------------------------------------------------------------------
-
   /// RBI IFSC: 4 letters, 0, then 6 alphanumeric. OCR often misreads 5th as O, I, L, |.
   String? _coerceIfscCandidate(String raw) {
     if (raw.length != 11) return null;
@@ -154,8 +117,6 @@ class BankDocumentParser {
     return null;
   }
 
-  /// RBI IFSC format: 4 uppercase letters, digit 0, then 6 alphanumeric.
-  /// OCR frequently reads the digit '0' as letter 'O' at position 5.
   String? _extractIfscCode(List<String> lines) {
     // Pass 1: lines that mention IFSC / branch code (label context).
     for (final line in lines) {
@@ -189,10 +150,7 @@ class BankDocumentParser {
     return null;
   }
 
-  // ---------------------------------------------------------------------------
   // Account Number Extraction
-  // ---------------------------------------------------------------------------
-
   String? _extractAccountNumber(List<String> lines, String? ifscCode) {
     final inline = RegExp(
       r'(?:a/c|account)\s*(?:no\.?|number|num|#)?\s*[:\.\-]?\s*(\d[\d\s\-\._]{6,26}\d|\d{9,20})',
@@ -262,8 +220,6 @@ class BankDocumentParser {
   }
 
   String? _digitsFromLine(String line, {required int min, required int max}) {
-    // Runs of digits with common separators (no leading \b — avoids missing
-    // "NO1234567890" when OCR glues words to numbers).
     final pattern = RegExp(r'\d[\d\s\-\._]{0,26}\d|\d{9,20}');
     final candidates = <String>[];
     for (final m in pattern.allMatches(line)) {
@@ -288,10 +244,7 @@ class BankDocumentParser {
         yr >= 1900 && yr <= 2100;
   }
 
-  // ---------------------------------------------------------------------------
   // Bank Name Extraction
-  // ---------------------------------------------------------------------------
-
   static const _bankKeywords = <String, String>{
     'STATE BANK': 'State Bank of India (SBI)',
     'SBI': 'State Bank of India (SBI)',
@@ -350,10 +303,7 @@ class BankDocumentParser {
     return null;
   }
 
-  // ---------------------------------------------------------------------------
   // Account Holder Name Extraction
-  // ---------------------------------------------------------------------------
-
   static const _ignoreKeywords = <String>{
     'STATE', 'BANK', 'HDFC', 'ICICI', 'AXIS', 'KOTAK', 'CANARA', 'UNION',
     'PUNJAB', 'NATIONAL', 'FEDERAL', 'INDIAN', 'OVERSEAS', 'SYNDICATE',
@@ -383,10 +333,6 @@ class BankDocumentParser {
       String? ifscCode,
       String? bankName,
       ) {
-    // Step 1: Explicitly labeled lines.
-    // Covers:  "Name(s): VASANT PATEL"       (Kotak)
-    //          "Name : PRAMASNIKUMAR PATEL"   (Bank of India)
-    //          "Customer Name: John Doe"      (HDFC)
     for (final line in lines) {
       if (_isNameLabel(line.toUpperCase())) {
         final name = _extractNameAfterLabel(line);
@@ -394,7 +340,6 @@ class BankDocumentParser {
       }
     }
 
-    // Step 2: Lines starting with honorific.
     final honorific = RegExp(
       r'^(?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?|Sri\.?|Smt\.?|Shri\.?|Ku\.?|Prof\.?)\s+(.+)',
       caseSensitive: false,
@@ -407,7 +352,6 @@ class BankDocumentParser {
       }
     }
 
-    // Step 3: Conservative heuristic scan.
     for (final line in lines) {
       if (accountNumber != null && line.contains(accountNumber)) continue;
       if (ifscCode != null && line.toUpperCase().contains(ifscCode)) continue;
@@ -439,7 +383,6 @@ class BankDocumentParser {
   }
 
   String? _extractNameAfterLabel(String line) {
-    // Split on first ':' — "Name : VASANT PATEL"
     final colonIdx = line.indexOf(':');
     if (colonIdx != -1) {
       final after = _stripNameNoise(line.substring(colonIdx + 1).trim());
@@ -459,7 +402,6 @@ class BankDocumentParser {
     return null;
   }
 
-  /// Remove common OCR junk after a labelled name value.
   String _stripNameNoise(String raw) {
     var s = raw.replaceAll(RegExp(r'[*#_|]{1,}'), ' ').trim();
     s = s.replaceAll(RegExp(r'\s+\d{1,4}$'), '');
@@ -512,5 +454,4 @@ class BankDocumentParser {
         .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
         .join(' ');
   }
-}
 }

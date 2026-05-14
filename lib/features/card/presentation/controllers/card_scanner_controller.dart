@@ -48,7 +48,6 @@ class CardScannerController extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Capture one frame for preview; OCR runs after [processPreviewImage].
   Future<void> captureForPreview() async {
     if (_state != ScannerState.ready) return;
     _errorMessage = null;

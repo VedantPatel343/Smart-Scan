@@ -1,5 +1,4 @@
-/// Represents structured banking details extracted from a scanned passbook or
-/// bank document via OCR + manual parsing.
+
 class BankDetails {
   final String? accountHolderName;
   final String? accountNumber;
@@ -13,12 +12,9 @@ class BankDetails {
     this.bankName,
   });
 
-  /// Returns true if at least one field was successfully extracted.
   bool get hasAnyData =>
       accountHolderName != null || accountNumber != null || ifscCode != null;
 
-  /// True only when OCR produced all three core passbook fields with plausible
-  /// shapes — used to reject random photos that are not a passbook.
   bool get isValidPassbookExtract {
     final ac = accountNumber?.replaceAll(RegExp(r'\s'), '') ?? '';
     if (!RegExp(r'^\d{9,20}$').hasMatch(ac)) return false;
@@ -32,10 +28,6 @@ class BankDetails {
     return true;
   }
 
-  /// Combines several partial reads. Uses **exact-string agreement** (≥2 same
-  /// reads) when available; otherwise picks each field from the **single scan**
-  /// with the strongest overall parse — never fabricates digits/letters by
-  /// per-position voting across mismatched strings (that caused wrong data).
   factory BankDetails.mergeCaptures(Iterable<BankDetails> scans) {
     final list = scans.toList();
     if (list.isEmpty) return const BankDetails();
@@ -130,7 +122,6 @@ class BankDetails {
     );
   }
 
-  /// Returns a masked account number: XXXXXXXX1234 (last 4 visible).
   String get maskedAccountNumber {
     if (accountNumber == null) return '••••••••••••';
     final digits = accountNumber!.replaceAll(RegExp(r'\s'), '');

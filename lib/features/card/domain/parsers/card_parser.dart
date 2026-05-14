@@ -2,7 +2,6 @@ import 'dart:math' show max, min;
 
 import '../entities/card_details.dart';
 
-/// Manual card parsing engine — no third-party card library used.
 class CardParser {
   static bool _binValid(String d) {
     final f = int.tryParse(d.isEmpty ? '' : d[0]) ?? -1;
@@ -27,7 +26,6 @@ class CardParser {
   }
 
   /// Manual Luhn validation on a card PAN (digits only after stripping spaces).
-  /// Assignment API: `bool isValidCard(String cardNumber)`.
   static bool isValidCard(String cardNumber) {
     final d = cardNumber.replaceAll(RegExp(r'\s'), '');
     if (!_binValid(d)) return false;
@@ -42,9 +40,6 @@ class CardParser {
     return CardDetails(cardNumber: cardNumber, expiryDate: expiryDate, cardHolderName: cardHolderName);
   }
 
-  /// Merges several [CardDetails] from repeated camera captures: per-digit
-  /// majority vote on the PAN, optional single-digit Luhn repair, then first
-  /// non-null expiry and name.
   static CardDetails mergeCaptures(List<CardDetails> scans) {
     if (scans.isEmpty) return const CardDetails();
 
@@ -158,7 +153,6 @@ class CardParser {
   List<String> _splitLines(String text) =>
       text.split(RegExp(r'[\n\r]+')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
 
-  // ── OCR correction (only on digit-heavy lines) ──────────────────────────────
   String _ocrCorrectIfDigitLine(String line) {
     final ns = line.replaceAll(' ', '');
     if (ns.isEmpty) return line;

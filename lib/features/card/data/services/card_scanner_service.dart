@@ -4,7 +4,6 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import '../../domain/entities/card_details.dart';
 import '../../domain/parsers/card_parser.dart';
 
-/// Encapsulates all OCR + camera logic and exposes simple async methods.
 class CardScannerService {
   final TextRecognizer _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
   final CardParser _parser = CardParser();
@@ -15,11 +14,7 @@ class CardScannerService {
   CameraController? get cameraController => _cameraController;
   bool get isInitialized => _cameraController?.value.isInitialized ?? false;
 
-  // ---------------------------------------------------------------------------
   // Camera lifecycle
-  // ---------------------------------------------------------------------------
-
-  /// Initialise the rear camera for scanning.
   Future<void> initCamera() async {
     final cameras = await availableCameras();
     if (cameras.isEmpty) throw Exception('No cameras available');
@@ -40,7 +35,6 @@ class CardScannerService {
     await _cameraController!.initialize();
   }
 
-  /// Dispose camera and OCR resources.
   Future<void> dispose() async {
     if (_cameraController != null && _cameraController!.value.isInitialized) {
       await _cameraController?.dispose();
@@ -49,25 +43,17 @@ class CardScannerService {
     _cameraController = null;
   }
 
-  // ---------------------------------------------------------------------------
   // Scanning
-  // ---------------------------------------------------------------------------
-
-  /// Single photo for preview (no OCR).
   Future<String?> takePictureOnly() async {
     if (!isInitialized) return null;
     final xFile = await _cameraController!.takePicture();
     return xFile.path;
   }
 
-  /// Run OCR + parse on an existing image file (after user confirms preview).
   Future<CardDetails?> processImagePath(String path) async {
     return processInputImage(InputImage.fromFilePath(path));
   }
 
-  /// Capture a few frames, run OCR, and parse card details. Multiple shots are
-  /// merged with per-digit majority voting on the PAN so intermittent OCR
-  /// errors are less likely to drop the card number.
   Future<CardDetails?> scanFrame() async {
     if (_isProcessing) return null;
     if (!isInitialized) return null;
@@ -98,8 +84,6 @@ class CardScannerService {
     }
   }
 
-  /// Reading-order text: sort every [TextLine] top-to-then-left so embossed PAN
-  /// order matches physical layout better than [RecognizedText.text] alone.
   String _sortedOcrText(RecognizedText text) {
     final items = <({double y, double x, String t})>[];
     for (final block in text.blocks) {
@@ -117,7 +101,6 @@ class CardScannerService {
     return items.map((e) => e.t).join('\n');
   }
 
-  /// Process an [InputImage] directly (used by image stream mode).
   Future<CardDetails?> processInputImage(InputImage image) async {
     if (_isProcessing) return null;
     _isProcessing = true;
